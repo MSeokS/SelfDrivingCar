@@ -63,18 +63,17 @@ def weight_cal(lines):
             cnt += 1
 
     if cnt == 0:
-        return -1
+        return -100
     else:
         return (total / cnt)
 
-def take_picture():
-    cap = cv2.VideoCapture(1)
+def take_picture(cap):
     if not cap.isOpened():
-        return None
+        return None, None
     
     ret, img = cap.read()
     if not ret:
-        return None
+        return None, None
     img = cv2.resize(img, (300, 400))
 
     # 그레이스케일 변환
@@ -103,13 +102,6 @@ def take_picture():
     line_image, weight_line = hough_lines(masked_edges, 1, np.pi/180, 15, 40, 20)
 
     lines_edges = weighted_img(line_image, np.zeros(imshape, dtype=np.uint8))
-    
-
-    cv2.imshow('pic', lines_edges)
-    cv2.waitKey(0)
-    print(weight_line)
 
     # 결과 출력
     return lines_edges, weight_line
-
-take_picture()
