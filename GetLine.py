@@ -45,6 +45,9 @@ def weighted_img(img, initial_img, α=0.8, β=1., λ=0.):
 def weight_cal(lines):
     cnt = 0.0
     total = 0.0
+    if lines is None:
+        print("done")
+        return -100
     for line in lines:
         for x1, y1, x2, y2 in line:
             if x1 == x2:
@@ -53,7 +56,7 @@ def weight_cal(lines):
                 continue
 
             m = (y2 - y1) / (x2 - x1)
-            if -0.25 < m < 0.25:
+            if -0.1 < m < 0.1:
                 continue
 
             theta = math.atan(m)
@@ -63,19 +66,21 @@ def weight_cal(lines):
             cnt += 1
 
     if cnt == 0:
+        print("done");
         return -100
     else:
         return (total / cnt)
 
 def take_picture(cap):
-    if not cap.isOpened():
+    """if not cap.isOpened():
         return None, None
     
     ret, img = cap.read()
     if not ret:
-        return None, None
+        return None, None"""
+    img = cv2.imread("pic.jpg")
     img = cv2.resize(img, (300, 400))
-
+    
     # 그레이스케일 변환
     gray = grayscale(img)
     _, gray = cv2.threshold(gray, 220, 255, cv2.THRESH_BINARY)
@@ -102,6 +107,12 @@ def take_picture(cap):
     line_image, weight_line = hough_lines(masked_edges, 1, np.pi/180, 15, 40, 20)
 
     lines_edges = weighted_img(line_image, np.zeros(imshape, dtype=np.uint8))
+    
+    cv2.imshow('pic', lines_edges)
+    cv2.waitKey(0)
+    print(weight_line)
 
     # 결과 출력
     return lines_edges, weight_line
+
+take_picture(0)
