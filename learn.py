@@ -1,8 +1,8 @@
 import numpy as np
 import tensorflow as tf
 from tensorflow import keras
-from tensorflow.python.keras import Sequential
-from tensorflow.python.keras.layers import Conv2D, Dense, Dropout, Flatten
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.layers import Conv2D, Dense, Dropout, Flatten, MaxPooling2D
 import serial
 import GetLine
 import random
@@ -11,12 +11,13 @@ from tqdm import tqdm
 import matplotlib.pyplot as plt
 import cv2
 import sys
+import time
 
 # 하이퍼파라미터 설정
 WIDTH = 640
 HEIGHT = 360
-MIN_ANGLE = -20
-MAX_ANGLE = 20
+MIN_ANGLE = 10
+MAX_ANGLE = 30
 
 NUM_ACTIONS = 10
 STATE_SHAPE = (HEIGHT, WIDTH, 3)
@@ -33,17 +34,11 @@ EPSILON_DECAY = 0.995
 EPSILON_MIN = 0.01
 
 class StateTransition:
-    def __init__(self):
+    def __init__(self, cap, arduino):
         # 초기 상태 설정
-        self.cap = cv2.VideoCapture("/dev/video2")
-        self.arduino = serial.Serial(port='COM3', baudrate=9600, timeout=.1)
         self.image, self.reward = self.take_picture()
-
-    def __del__(self):
-        if hasattr(self, 'cap') and self.cap.isOpened():
-            self.cap.release()
-        if hasattr(self, 'arduino'):
-            self.arduino.close()
+        self.cap = cap
+        self.arduino = arduino
 
     def get_state(self):
         # 현재 이미지 반환
@@ -70,17 +65,25 @@ class StateTransition:
 
 class Car:
     def __init__(self):
+        self.cap = cv2.VideoCapture("/dev/video2")
+        self.arduino = serial.Serial(port='COM3', baudrate=9600, timeout=.1)
         self.reset()
 
+    def __del__(self):
+        if hasattr(self, 'cap') and self.cap.isOpened():
+            self.cap.release()
+        if hasattr(self, 'arduino'):
+            self.arduino.close()
+
     def reset(self):
-        self.state_transition = StateTransition()
+        self.state_transition = StateTransition(self.cap, self.arduino)
         self.total_reward = 0
         return self.state_transition.get_state()
         
     def step(self, action):
         self.state_transition.move(action)
         
-        reward = self.get_reward()
+        reward = self.state_transition.get_reward()
         self.total_reward += reward
 
         return self.state_transition.get_state(), reward, (reward == -100)
@@ -103,8 +106,10 @@ class DQNAgent:
     def _create_model(self):
         model = Sequential([
             Conv2D(32, (3, 3), input_shape=STATE_SHAPE, activation='relu'),
+            MaxPooling2D(pool_size=(2, 2)),
             Dropout(0.1),
             Conv2D(32, (3, 3), activation='relu'),
+            MaxPooling2D(pool_size=(2, 2)),
             Dropout(0.1),
             Flatten(),
             Dense(256, activation='relu'),
@@ -179,7 +184,9 @@ class DQNTrainer:
         pbar = tqdm(initial = 0, total = self.max_episode, unit="episodes")
         try:
             for episode in range(self.max_episode):
+                time.sleep(1)
                 cur_state = self.env.reset()
+                measure_time = time.time()
                 step, episode_reward, done = 0, 0, False
                 print(f"episode : {episode}")
                 while not done:
@@ -188,6 +195,11 @@ class DQNTrainer:
                     else:
                         output = self.agent.get_q_values(cur_state)
                         action = np.argmax(output)
+
+                    decision_time = time.time() - measure_time
+                    if(decision_time < 1):
+                        time.sleep(1 - decision_time)
+                    measure_time = time.time()
 
                     next_state, reward, done = self.env.step(action)
 
@@ -206,7 +218,7 @@ class DQNTrainer:
                 self.epsilon = max(self.epsilon * self.epsilon_decay, self.epsilon_min)
 
                 if (episode % self.save_freq ) == 0:
-                    self.agent.save(f"model{episode}.h5", f"target_model{episode}.h5")
+                    self.agent.save(f"model{episode}.keras", f"target_model{episode}.keras")
 
                 pbar.update(1)
 
@@ -215,7 +227,7 @@ class DQNTrainer:
         except KeyboardInterrupt:
             print("KeyboardInterrupt")
         finally:
-            self.agent.save("model.h5", "target_model.h5")
+            self.agent.save("model.keras", "target_model.keras")
             plt.plot(self.rewards_record, label='reward')
             plt.plot(self.steps_record, label='step')
             plt.show()
