@@ -36,9 +36,9 @@ EPSILON_MIN = 0.01
 class StateTransition:
     def __init__(self, cap, arduino):
         # 초기 상태 설정
-        self.image, self.reward = self.take_picture()
         self.cap = cap
         self.arduino = arduino
+        self.image, self.reward = self.take_picture()
 
     def get_state(self):
         # 현재 이미지 반환
@@ -52,9 +52,12 @@ class StateTransition:
         # 모터 회전 후 이동
         angle = ((MAX_ANGLE - MIN_ANGLE) / (NUM_ACTIONS - 1)) * action + MIN_ANGLE
         self.arduino.write(bytes(f"{angle}\n", 'utf-8'))
-        self.image, self.reward = self.take_picture(self.cap)
+        self.image, self.reward = self.take_picture()
         return
     
+    def stop(self):
+        self.arduino.write(bytes("0", 'utf-8'))
+
     def take_picture(self):
         image, reward = GetLine.take_picture(self.cap)
         if image is None:
@@ -65,8 +68,10 @@ class StateTransition:
 
 class Car:
     def __init__(self):
-        self.cap = cv2.VideoCapture("/dev/video2")
-        self.arduino = serial.Serial(port='COM3', baudrate=9600, timeout=.1)
+        self.cap = cv2.VideoCapture(1)
+        self.cap.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
+        self.cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 360)
+        self.arduino = serial.Serial(port='COM5', baudrate=9600, timeout=.1)
         self.reset()
 
     def __del__(self):
@@ -197,13 +202,14 @@ class DQNTrainer:
                         action = np.argmax(output)
 
                     decision_time = time.time() - measure_time
+                    print(len(self.agent.replay_memory))
                     if(decision_time < 0.5):
                         time.sleep(0.5 - decision_time)
                     measure_time = time.time()
 
                     next_state, reward, done = self.env.step(action)
 
-                    self.agent.update_replay_memory(cur_state, action, reward, next_state, done)
+                    self.agent.update_replay_memory(np.squeeze(cur_state), action, reward, np.squeeze(next_state), done)
 
                     cur_state = next_state
                     episode_reward += reward
@@ -211,6 +217,8 @@ class DQNTrainer:
 
                     if done:
                         break
+
+                self.agent.stop()
 
                 self.agent.increase_target_update_counter()
 

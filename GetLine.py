@@ -2,7 +2,7 @@ import math
 import cv2
 import numpy as np
 
-target_theta = 1.1  # 예상 radian
+target_theta = 1.2  # 예상 radian
 
 def grayscale(img):
     return cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
@@ -83,18 +83,16 @@ def reward_cal(left, right):
     return reward
 
 def take_picture(cap):
-    """if not cap.isOpened():
+    if not cap.isOpened():
         return None, None
     
     ret, img = cap.read()
     if not ret:
-        return None, None"""
-    img = cv2.imread("pic.jpg")
-    img = cv2.resize(img, (640, 360))
-    
+        return None, None
+   
     # 그레이스케일 변환
     gray = grayscale(img)
-    _, gray = cv2.threshold(gray, 210, 255, cv2.THRESH_BINARY)
+    _, gray = cv2.threshold(gray, 220, 255, cv2.THRESH_BINARY)
 
     # 가우시안 블러 적용
     blur_gray = gaussian_blur(gray, 5)
@@ -107,13 +105,13 @@ def take_picture(cap):
     vertices_right = np.array([[
         (imshape[1] * 0.6, imshape[0] * 0.95),          # 아래 왼쪽
         (imshape[1] * 0.6, imshape[0] * 0.2),   # 위쪽 왼쪽
-        (imshape[1] * 0.9, imshape[0] * 0.2),   # 위쪽 오른쪽
+        (imshape[1] * 0.98, imshape[0] * 0.2),   # 위쪽 오른쪽
         (imshape[1] * 1.0, imshape[0] * 0.95)           # 아래 오른쪽
     ]], dtype=np.int32)
     
     vertices_left = np.array([[
         (imshape[1] * 0, imshape[0] * 0.95),          # 아래 왼쪽
-        (imshape[1] * 0.1, imshape[0] * 0.2),   # 위쪽 왼쪽
+        (imshape[1] * 0.02, imshape[0] * 0.2),   # 위쪽 왼쪽
         (imshape[1] * 0.4, imshape[0] * 0.2),   # 위쪽 오른쪽
         (imshape[1] * 0.4, imshape[0] * 0.95)           # 아래 오른쪽
     ]], dtype=np.int32)
@@ -122,7 +120,7 @@ def take_picture(cap):
     masked_left = cv2.polylines(img_copy, vertices_left, isClosed=True, color=255, thickness=5)
     masked_right = cv2.polylines(img_copy, vertices_right, isClosed=True, color=255, thickness=5)
 
-    cv2.imshow('range', img_copy)
+#    cv2.imshow('range', img_copy)
 
     masked_edges_left = region_of_interest(edges, vertices_left)
     masked_edges_right = region_of_interest(edges, vertices_right)
@@ -132,20 +130,24 @@ def take_picture(cap):
     line_image_R, theta_R = hough_lines(masked_edges_right, 1, np.pi/180, 15, 40, 20)
 
     lines_edges = weighted_img(line_image_R, line_image_L)
-    
-    cv2.imshow('pic', lines_edges)
-    cv2.waitKey(0)
+#    cv2.imshow('pic', lines_edges)
+#    cv2.waitKey(0)
+    lines_edges = np.expand_dims(lines_edges, axis=0)
 
-    print(theta_L)
-    print(theta_R)
+#    print(theta_L)
+#    print(theta_R)
 
     weight = reward_cal(theta_L, theta_R)
     if weight == 0:
         weight = -100
 
-    print(weight)
+#    print(weight)
 
     # 결과 출력
     return lines_edges, weight
 
-take_picture(0)
+
+cap = cv2.VideoCapture(1)
+cap.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
+cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 360)
+take_picture(cap)
