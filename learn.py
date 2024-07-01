@@ -21,11 +21,11 @@ MAX_ANGLE = 30
 
 NUM_ACTIONS = 10
 STATE_SHAPE = (HEIGHT, WIDTH, 3)
-GAMMA = 0.9
+GAMMA = 0.5
 BATCH_SIZE = 32
 MIN_REPLAY_SIZE = 100
-REPLAY_SIZE = 5000
-TARGET_UPDATE_FREG = 10
+REPLAY_SIZE = 2000
+TARGET_UPDATE_FREG = 1
 
 MAX_EPISODE = 100
 
@@ -68,7 +68,7 @@ class Car:
         self.cap = cv2.VideoCapture("/dev/video2")
         self.arduino = serial.Serial(port='COM3', baudrate=9600, timeout=.1)
         self.reset()
-        
+
     def __del__(self):
         if hasattr(self, 'cap') and self.cap.isOpened():
             self.cap.release()

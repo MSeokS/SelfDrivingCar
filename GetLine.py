@@ -2,7 +2,7 @@ import math
 import cv2
 import numpy as np
 
-target_theta = 1.4
+target_theta = 1.1  # 예상 radian
 
 def grayscale(img):
     return cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
@@ -94,13 +94,13 @@ def take_picture(cap):
     
     # 그레이스케일 변환
     gray = grayscale(img)
-    _, gray = cv2.threshold(gray, 220, 255, cv2.THRESH_BINARY)
+    _, gray = cv2.threshold(gray, 210, 255, cv2.THRESH_BINARY)
 
     # 가우시안 블러 적용
     blur_gray = gaussian_blur(gray, 5)
 
     # Canny 엣지 검출 적용
-    edges = canny(blur_gray, 100, 150)
+    edges = canny(blur_gray, 50, 150)
 
     # 관심 영역 설정
     imshape = img.shape
