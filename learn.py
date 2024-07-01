@@ -33,10 +33,10 @@ EPSILON_DECAY = 0.995
 EPSILON_MIN = 0.01
 
 class StateTransition:
-    def __init__(self):
+    def __init__(self, cap, arduino):
         # 초기 상태 설정
-        self.cap = cv2.VideoCapture("/dev/video2")
-        self.arduino = serial.Serial(port='COM3', baudrate=9600, timeout=.1)
+        self.cap = cap
+        self.arduino = arduino
         self.image, self.reward = self.take_picture()
 
     def __del__(self):
@@ -57,7 +57,7 @@ class StateTransition:
         # 모터 회전 후 이동
         angle = ((MAX_ANGLE - MIN_ANGLE) / (NUM_ACTIONS - 1)) * action + MIN_ANGLE
         self.arduino.write(bytes(f"{angle}\n", 'utf-8'))
-        self.image, self.reward = self.take_picture()
+        self.image, self.reward = self.take_picture(self.cap)
         return
     
     def take_picture(self):
@@ -71,9 +71,17 @@ class StateTransition:
 class Car:
     def __init__(self):
         self.reset()
+        self.cap = cv2.VideoCapture("/dev/video2")
+        self.arduino = serial.Serial(port='COM3', baudrate=9600, timeout=.1)
+
+    def __del__(self):
+        if hasattr(self, 'cap') and self.cap.isOpened():
+            self.cap.release()
+        if hasattr(self, 'arduino'):
+            self.arduino.close()
 
     def reset(self):
-        self.state_transition = StateTransition()
+        self.state_transition = StateTransition(self.cap, self.arduino)
         self.total_reward = 0
         return self.state_transition.get_state()
         
@@ -193,20 +201,22 @@ class DQNTrainer:
 
                     self.agent.update_replay_memory(cur_state, action, reward, next_state, done)
 
-                    self.agent.train()
                     cur_state = next_state
                     episode_reward += reward
                     step += 1
 
                     if done:
                         break
-
+                
+                for i in range(step / 10):
+                    self.agent.train()
+                    
                 self.agent.increase_target_update_counter()
 
                 self.epsilon = max(self.epsilon * self.epsilon_decay, self.epsilon_min)
 
                 if (episode % self.save_freq ) == 0:
-                    self.agent.save(f"model{episode}.h5", f"target_model{episode}.h5")
+                    self.agent.save(f"model{episode}.keras", f"target_model{episode}.keras")
 
                 pbar.update(1)
 
@@ -215,7 +225,7 @@ class DQNTrainer:
         except KeyboardInterrupt:
             print("KeyboardInterrupt")
         finally:
-            self.agent.save("model.h5", "target_model.h5")
+            self.agent.save("model.keras", "target_model.keras")
             plt.plot(self.rewards_record, label='reward')
             plt.plot(self.steps_record, label='step')
             plt.show()
