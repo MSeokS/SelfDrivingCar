@@ -52,7 +52,7 @@ class StateTransition:
         # 모터 회전 후 이동
         angle = ((MAX_ANGLE - MIN_ANGLE) / (NUM_ACTIONS - 1)) * action + MIN_ANGLE
         self.arduino.write(bytes(f"{angle}\n", 'utf-8'))
-        self.image, self.reward = self.take_picture()
+        self.image, self.reward = self.take_picture(self.cap)
         return
     
     def take_picture(self):
@@ -68,7 +68,7 @@ class Car:
         self.cap = cv2.VideoCapture("/dev/video2")
         self.arduino = serial.Serial(port='COM3', baudrate=9600, timeout=.1)
         self.reset()
-
+        
     def __del__(self):
         if hasattr(self, 'cap') and self.cap.isOpened():
             self.cap.release()
@@ -212,9 +212,6 @@ class DQNTrainer:
                     if done:
                         break
 
-                for i in range(step / 10):
-                    self.agent.train()
-                    
                 self.agent.increase_target_update_counter()
 
                 self.epsilon = max(self.epsilon * self.epsilon_decay, self.epsilon_min)
