@@ -184,7 +184,7 @@ class DQNTrainer:
         pbar = tqdm(initial = 0, total = self.max_episode, unit="episodes")
         try:
             for episode in range(self.max_episode):
-                time.sleep(1)
+                time.sleep(3)
                 cur_state = self.env.reset()
                 measure_time = time.time()
                 step, episode_reward, done = 0, 0, False
@@ -197,15 +197,14 @@ class DQNTrainer:
                         action = np.argmax(output)
 
                     decision_time = time.time() - measure_time
-                    if(decision_time < 1):
-                        time.sleep(1 - decision_time)
+                    if(decision_time < 0.5):
+                        time.sleep(0.5 - decision_time)
                     measure_time = time.time()
 
                     next_state, reward, done = self.env.step(action)
 
                     self.agent.update_replay_memory(cur_state, action, reward, next_state, done)
 
-                    self.agent.train()
                     cur_state = next_state
                     episode_reward += reward
                     step += 1
@@ -213,6 +212,9 @@ class DQNTrainer:
                     if done:
                         break
 
+                for i in range(step / 10):
+                    self.agent.train()
+                    
                 self.agent.increase_target_update_counter()
 
                 self.epsilon = max(self.epsilon * self.epsilon_decay, self.epsilon_min)

@@ -49,7 +49,7 @@ def theta_cal(img, lines):
     total = 0.0
     ver_lines = []
     if lines is None:
-        return 0
+        return 0, None
     for line in lines:
         for x1, y1, x2, y2 in line:
             if x1 == x2:
@@ -89,7 +89,7 @@ def take_picture(cap):
     if not ret:
         return None, None"""
     img = cv2.imread("pic.jpg")
-    img = cv2.resize(img, (300, 400))
+    img = cv2.resize(img, (640, 360))
     
     # 그레이스케일 변환
     gray = grayscale(img)
