@@ -11,12 +11,68 @@ def grayscale(img):
 def gaussian_blur(img, kernel_size):
     return cv2.GaussianBlur(img, (kernel_size, kernel_size), 0)
 
+def region_of_interest(img, vertices):
+    mask = np.zeros_like(img)   
+    if len(img.shape) > 2:
+        channel_count = img.shape[2]  
+        ignore_mask_color = (255,) * channel_count
+    else:
+        ignore_mask_color = 255
+    cv2.fillPoly(mask, vertices, ignore_mask_color)
+    masked_image = cv2.bitwise_and(img, mask)
+    return masked_image
+
+def theta_cal(img, lines):
+    cnt = 0.0
+    total = 0.0
+    ver_lines = []
+    if lines is None:
+        return 0, None
+
+    for line in lines:
+        for x1, y1, x2, y2 in line:
+            if x1 == x2:
+                total += 1.0
+                cnt += 1
+                continue
+
+            m = (y1 - y2) / (x2 - x1)
+            if -0.1 < m < 0.1:
+                continue
+
+            ver_lines.append((x1, y1, x2, y2))
+
+            theta = math.atan(m)
+
+            total += theta
+            cnt += 1
+
+    if cnt == 0:
+        return 0, None
+    else:
+        return (total / cnt), ver_lines
+
+def wrapping(image):
+    points = [[ 19, 359],
+  [598, 358],
+  [515, 167],
+  [123, 172]]
+
+    height, width = image.shape[0], image.shape[1]
+    scaled_points = [(int(p[0]), int(p[1])) for p in points]
+    
+    src_points = np.float32([scaled_points[0], scaled_points[1], scaled_points[3], scaled_points[2]])
+    dst_points = np.float32([[100, height], [width - 100, height], [100, 0], [width - 100, 0]])
+    
+    matrix = cv2.getPerspectiveTransform(src_points, dst_points)
+    bird_eye_view = cv2.warpPerspective(image, matrix, (width, height))
+    return bird_eye_view
+
 def plothistogram(image):
     histogram = np.sum(image[image.shape[0]//2:, :], axis=0)
     midpoint = np.int32(histogram.shape[0]/2)
     leftbase = np.argmax(histogram[:midpoint])
     rightbase = np.argmax(histogram[midpoint:]) + midpoint
-    
     return leftbase, rightbase
 
 def slide_window_search(binary_warped, left_current, right_current):
@@ -47,6 +103,7 @@ def slide_window_search(binary_warped, left_current, right_current):
         good_right = ((nonzero_y >= win_y_low) & (nonzero_y < win_y_high) & (nonzero_x >= win_xright_low) & (nonzero_x < win_xright_high)).nonzero()[0]
         left_lane.append(good_left)
         right_lane.append(good_right)
+        #cv2.imshow("oo", out_img)
 
         if len(good_left) > minpix:
             left_current = np.int32(np.mean(nonzero_x[good_left]))
@@ -61,8 +118,8 @@ def slide_window_search(binary_warped, left_current, right_current):
     rightx = nonzero_x[right_lane]
     righty = nonzero_y[right_lane]
 
-    if len(leftx) == 0 or len(rightx)==0:
-        return None, None, None, None
+    if len(leftx) == 0 or len(rightx) == 0:
+        return None, None, None
 
     left_fit = np.polyfit(lefty, leftx, 2)
     right_fit = np.polyfit(righty, rightx, 2)
@@ -81,7 +138,9 @@ def slide_window_search(binary_warped, left_current, right_current):
         cv2.line(out_img, (int(left_fitx[i]), int(ploty[i])), (int(left_fitx[i]), int(ploty[i])), (255, 255, 0), 2)
         cv2.line(out_img, (int(right_fitx[i]), int(ploty[i])), (int(right_fitx[i]), int(ploty[i])), (255, 255, 0), 2)
     
-    cv2.imshow('oo', out_img)
+    cv2.imshow("oo", out_img)
+
+    
     return ltx, rtx, ploty
 
 def take_picture(cap):
@@ -91,56 +150,60 @@ def take_picture(cap):
     ret, img = cap.read()
     if not ret:
         return None, None
-    
-#    cv2.imshow('main', img)
-#    img = wrapping(img)
-    # 2. 이미지를 HSV 색 공간으로 변환
-    hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
 
-    # 3. 흰색 범위 설정
-    lower_white = np.array([0, 0, 200])
-    upper_white = np.array([180, 55, 255])
-
-    # 4. 마스크 생성
-    mask = cv2.inRange(hsv, lower_white, upper_white)
-
-    # 5. 결과 이미지 생성 (흰색 부분만 추출)
-    img = cv2.bitwise_and(img, img, mask=mask)
+    cv2.imshow('main', img)
+    img = wrapping(img) 
+    cv2.imshow('bev', img)
 
     # 그레이스케일 변환
     gray = grayscale(img)
+    _, gray = cv2.threshold(gray, 200, 255, cv2.THRESH_BINARY)
 
     # 가우시안 블러 적용
     blur_gray = gaussian_blur(gray, 5)
-
-    _, binary_img = cv2.threshold(blur_gray, 220, 255, cv2.THRESH_BINARY)
-
-    left, right = plothistogram(binary_img)
-    ltx, rtx, ploty = slide_window_search(binary_img, left, right)
     
-    binary_img = binary_img / 255.0
-    binary_img = np.expand_dims(binary_img, axis=0)
-    binary_img = np.expand_dims(binary_img, axis=-1)
-    if ltx is None:
-        return binary_img, -100
-    else:
-        weight = 10
-        if ltx[len(ltx) - 1] > 200:
-            weight -= 10
-        if rtx[len(rtx) - 1] < 440:
-            weight -= 10
-        if weight == -10:
-            weight = -100
-        return binary_img, weight
+    _, binary_img = cv2.threshold(gray, 200, 255, cv2.THRESH_BINARY)
 
+    imshape = binary_img.shape
+    vertices = np.array([[
+        (imshape[1] * 0, imshape[0] * 1.0),          
+        (imshape[1] * 0, imshape[0] * 0.4),         
+        (imshape[1] * 0.3, imshape[0] * 0.4),
+        (imshape[1] * 0.3, imshape[0] * 1.0), 
+        (imshape[1] * 0.7, imshape[0] * 1.0),
+        (imshape[1] * 0.7, imshape[0] * 0.4),
+        (imshape[1] * 1, imshape[0] * 0.4),
+        (imshape[1] * 1, imshape[0] * 1)         
+    ]], dtype=np.int32)
+
+    masked = region_of_interest(binary_img, vertices)
+
+    left, right = plothistogram(masked)
+    ltx, rtx, ploty =slide_window_search(masked, left, right)
+
+    if ltx is None:
+        return 0
+
+    if ltx[len(ltx) - 1] > 200:
+        return 0.1
+    if rtx[len(rtx) - 1] < 440:
+        return -0.8
+    mean_start = (ltx[len(ltx) - 1] + rtx[len(rtx) - 1]) / 2
+    mean_end = (ltx[0] + rtx[0]) / 2
+    
+    k = 1
+    reward =  ((mean_end - mean_start) / (ploty[0] - ploty[len(ploty) - 1])) * k
+    print(reward)
+    return reward
+    # 허프 변환을 사용하여 직선 검출
+
+    # 결과 출력
 
 if __name__ == '__main__':
     cap = cv2.VideoCapture("/dev/video2")
     while True:
         time.sleep(0.1)
-        img, reward = take_picture(cap)
-        img = np.squeeze(img)
+        take_picture(cap)
         if cv2.waitKey(1) & 0xFF == ord('q'):
             break;
     cap.release()
-

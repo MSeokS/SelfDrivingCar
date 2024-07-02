@@ -19,8 +19,8 @@ HEIGHT = 360
 MIN_ANGLE = 10
 MAX_ANGLE = 30
 
-NUM_ACTIONS = 10
-STATE_SHAPE = (HEIGHT, WIDTH, 3)
+NUM_ACTIONS = 11
+STATE_SHAPE = (HEIGHT, WIDTH, 1)
 GAMMA = 0.5
 BATCH_SIZE = 32
 MIN_REPLAY_SIZE = 100
@@ -30,7 +30,7 @@ TARGET_UPDATE_FREG = 1
 MAX_EPISODE = 100
 
 EPSILON = 0.99
-EPSILON_DECAY = 0.995
+EPSILON_DECAY = 0.95
 EPSILON_MIN = 0.01
 
 class StateTransition:
@@ -51,15 +51,13 @@ class StateTransition:
     def move(self, action):
         # 모터 회전 후 이동
         angle = ((MAX_ANGLE - MIN_ANGLE) / (NUM_ACTIONS - 1)) * action + MIN_ANGLE
-        self.arduino.write(bytes(f"{angle}\n", 'utf-8'))
+        angle = int(angle)
+        self.arduino.write(f"{angle}\n".encode('utf-8'))
         self.image, self.reward = self.take_picture()
         return
     
-    def stop(self):
-        self.arduino.write(bytes("0", 'utf-8'))
-
     def take_picture(self):
-        image, reward = GetLine.take_picture(self.cap)
+        image, reward, line = GetLine.take_picture(self.cap)
         if image is None:
             print("Camera disconnect.")
             sys.exit()
@@ -68,10 +66,10 @@ class StateTransition:
 
 class Car:
     def __init__(self):
-        self.cap = cv2.VideoCapture(1)
+        self.cap = cv2.VideoCapture('/dev/video2')
         self.cap.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
         self.cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 360)
-        self.arduino = serial.Serial(port='COM5', baudrate=9600, timeout=.1)
+        self.arduino = serial.Serial(port='/dev/ttyACM0', baudrate=9600, timeout=.1)
         self.reset()
 
     def __del__(self):
@@ -80,6 +78,9 @@ class Car:
         if hasattr(self, 'arduino'):
             self.arduino.close()
 
+    def stop(self):
+        self.arduino.write("0\n".encode('utf-8'))
+        
     def reset(self):
         self.state_transition = StateTransition(self.cap, self.arduino)
         self.total_reward = 0
@@ -202,12 +203,12 @@ class DQNTrainer:
                         action = np.argmax(output)
 
                     decision_time = time.time() - measure_time
-                    print(len(self.agent.replay_memory))
-                    if(decision_time < 0.5):
-                        time.sleep(0.5 - decision_time)
+                    if decision_time < 1:
+                        time.sleep(1 - decision_time)
                     measure_time = time.time()
 
                     next_state, reward, done = self.env.step(action)
+                    print(reward)
 
                     self.agent.update_replay_memory(np.squeeze(cur_state), action, reward, np.squeeze(next_state), done)
 
@@ -218,7 +219,10 @@ class DQNTrainer:
                     if done:
                         break
 
-                self.agent.stop()
+                print(done)
+                self.env.stop()
+                time.sleep(1)
+                self.env.stop()
 
                 self.agent.increase_target_update_counter()
 
@@ -226,7 +230,6 @@ class DQNTrainer:
 
                 if (episode % self.save_freq ) == 0:
                     self.agent.save(f"model{episode}.keras", f"target_model{episode}.keras")
-
                 pbar.update(1)
 
                 self.rewards_record.append(episode_reward)

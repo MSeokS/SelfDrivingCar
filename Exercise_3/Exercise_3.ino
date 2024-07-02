@@ -9,6 +9,7 @@ int motorH1 = 6;
 int motorH2 = 7;
 int reg;
 int temp;
+char a;
 
 
 void setup() {
@@ -26,7 +27,6 @@ void loop() {
   // put your main code here, to run repeatedly:
   if (Serial.available() > 0) { // 시리얼 버퍼에 데이터가 있는지 확인
     temp = Serial.parseInt(); // 정수형 데이터 읽기
-    Serial.flush();
     Serial.print("Received Value: ");
     Serial.println(temp); // 받은 값 출력
     
@@ -35,12 +35,10 @@ void loop() {
       motor_hold(motorB1, motorB2);
     }
     else {
-      motor_forward(motorA1, motorA2, 100);
-      motor_forward(motorB1, motorB2, 100);
+      motor_forward(motorA1, motorA2, 30);
+      motor_forward(motorB1, motorB2, 30);
 
-      reg = potentiometer_Read(analogPin);
-      Serial.print("Value : ");
-      Serial.println(reg);
+        reg = potentiometer_Read(analogPin);
       
       if (temp > reg) {
         while(temp > reg) {
@@ -60,23 +58,8 @@ void loop() {
       }
       motor_hold(motorH1, motorH2);
     }
-
-    while (Serial.available() > 0)
+    while(Serial.available() > 0) {
       Serial.read();
+    }
   }
-
-
-/*
-  // Backward
-  Serial.println("Motor Backward");
-  motor_backward(motorA1, motorA2, 75);
-  motor_backward(motorB1, motorB2, 75);
-  delay(3000);
-
-  // Hold
-  Serial.println("Motor Hold");
-  motor_hold(motorA1, motorA2);
-  motor_hold(motorB1, motorB2);
-  delay(3000);
-*/
 }
