@@ -30,16 +30,19 @@ void loop() {
     Serial.print("Received Value: ");
     Serial.println(temp); // 받은 값 출력
     
-    if(temp == 0) {
+    if(temp == 999) {
       motor_hold(motorA1, motorA2);
       motor_hold(motorB1, motorB2);
     }
     else {
-      motor_forward(motorA1, motorA2, 30);
-      motor_forward(motorB1, motorB2, 30);
+      motor_forward(motorA1, motorA2, 200);
+      motor_forward(motorB1, motorB2, 200);
 
         reg = potentiometer_Read(analogPin);
-      
+      if (temp < 10)
+        temp = 10;
+      if (temp > 30)
+        temp = 30;
       if (temp > reg) {
         while(temp > reg) {
           motor_forward(motorH1, motorH2, 150);

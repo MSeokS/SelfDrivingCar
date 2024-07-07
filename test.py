@@ -37,8 +37,8 @@ def get_points(image):
         return masked_frame
     
     def resize_image(img, scale_percent):
-        width = 640
-        height = 360
+        width = 720
+        height = 720
         return cv2.resize(img, (width, height), interpolation=cv2.INTER_AREA)
 
     scale_percent = 50
