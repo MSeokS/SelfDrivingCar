@@ -8,7 +8,21 @@ import sys
 
 class ComputerVision(object):
     def grayscale(self, img):
-        return cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+        
+        hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
+        """
+        imgH, imgS, imgV = cv2.split(hsv)
+        cv2.imshow("H", imgH)
+        cv2.imshow("S", imgS)
+        cv2.imshow("V", imgV)
+        """
+        lower = np.array([0, 0, 200])
+        upper = np.array([255, 30, 255])
+
+        mask = cv2.inRange(hsv, lower, upper)
+
+        white = cv2.bitwise_and(img, img, mask=mask)
+        return cv2.cvtColor(white, cv2.COLOR_BGR2GRAY)
 
     def gaussian_blur(self, img, kernel_size=(None, None)):
         return cv2.GaussianBlur(img, kernel_size, 0)
@@ -52,24 +66,22 @@ class ComputerVision(object):
                     cnt += 1 
        
         cv2.imshow('line', img)
+        
+        
+        hist, value = self.plothistogram(img)
+        print(hist, value) 
 
-        hist = self.plothistogram(img)
-        print(hist)
-        """
-        if hist < 400 :
-            return 0.2
-        if hist > 500:
-            return -0.2
-        """
         if cnt == 0:
             return None
-
+    
         result = total / cnt
+        #result += (hist - 460) * 0.0015
 
         return result
 
     def morphology(self, img, kernel_size=(None, None), mode="opening"):
         kernel = cv2.getStructuringElement(cv2.MORPH_RECT, kernel_size)
+        return cv2.morphologyEx(img, cv2.MORPH_OPEN, kernel)
 
     def region_of_interest(self, img, vertices):
         mask = np.zeros_like(img)   
@@ -84,11 +96,14 @@ class ComputerVision(object):
         return masked_image
 
     def plothistogram(self, image):
-        histogram = np.sum(image[image.shape[0]//2:, :], axis=0)
-        rightbase = np.argmax(histogram[:])
-    
-        return rightbase
-
+        histogram = np.sum(image[3 * image.shape[0]//4:, :], axis=0)
+        indices = np.where(histogram >= 20000)[0]
+        if indices.size == 0:
+            return 640, 200000
+        elif indices[-1] < 360:
+            return 0, 20000
+        else:
+            return indices[-1], histogram[indices[-1]]
 
     def wrapping(self, image):
         points = [[ 19, 359],
@@ -118,13 +133,15 @@ class ComputerVision(object):
 
         # 그레이스케일 변환
         gray = self.grayscale(bird_eye_view)
-        hist = self.histogram_equalization(gray)
+        
+        _, binary_img = cv2.threshold(gray, 200, 255, cv2.THRESH_BINARY)
+        blur_gray = self.gaussian_blur(binary_img, (5, 5))
+        
+        hist = self.histogram_equalization(blur_gray)
         dst = self.morphology(hist, (2, 2), mode="opening")
 
         # 가우시안 블러 적용
-        blur_gray = self.gaussian_blur(gray, (5, 5))
-        _, blur_gray = cv2.threshold(blur_gray, 220, 255, cv2.THRESH_BINARY)
-        
+        cv2.imshow("dst",dst)
         imshape = img.shape
         vertices = np.array([[
             (160, imshape[0] * 1.0),          
@@ -133,17 +150,11 @@ class ComputerVision(object):
             (496, imshape[0] * 1)         
         ]], dtype=np.int32)
        
-
-        #cv2.polylines(bird_eye_view, vertices, isClosed=True, color=(0, 255, 0), thickness=2)
-
-        masked = self.region_of_interest(blur_gray, vertices)
+        masked = self.region_of_interest(dst, vertices)
         canny = self.canny_edge(masked, 150, 200)
-        
-        lines = self.hough_transform(canny, 1, np.pi/180, 50, 10, 20, mode="lineP")
-        #lines = self.hough_transform(canny, 1, np.pi/180, 100, 100, 10, mode="lineP")
+        lines = self.hough_transform(canny, 1, np.pi/180, 50, 50, 20, mode="lineP")
 
-        
-        reward = self.calculation(canny, lines)
+        reward = self.calculation(dst, lines)
 
         return reward
 
@@ -169,7 +180,7 @@ class Arduino:
                 if self.reward is None:
                     continue
                 
-                k = 50
+                k = 43
                 angle = self.reward * k + 17
                 
                 angle = int(angle)

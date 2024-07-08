@@ -35,8 +35,8 @@ void loop() {
       motor_hold(motorB1, motorB2);
     }
     else {
-      motor_forward(motorA1, motorA2, 200);
-      motor_forward(motorB1, motorB2, 200);
+      motor_forward(motorA1, motorA2, 255);
+      motor_forward(motorB1, motorB2, 255);
 
         reg = potentiometer_Read(analogPin);
       if (temp < 10)
