@@ -6,6 +6,12 @@ import sys
 
 # 하이퍼파라미터 설정
 
+lineK = 0.005
+angleK = 18
+
+lineR = 470
+lineL = 170
+
 class ComputerVision(object):
     def grayscale(self, img):
         
@@ -16,8 +22,8 @@ class ComputerVision(object):
         cv2.imshow("S", imgS)
         cv2.imshow("V", imgV)
         """
-        lower = np.array([0, 0, 200])
-        upper = np.array([255, 30, 255])
+        lower = np.array([0, 0, 150])
+        upper = np.array([255, 50, 255])
 
         mask = cv2.inRange(hsv, lower, upper)
 
@@ -65,17 +71,24 @@ class ComputerVision(object):
                     total += theta
                     cnt += 1 
        
-        cv2.imshow('line', img)
         
+        self.plothistogram(img)
         
-        hist, value = self.plothistogram(img)
-        print(hist, value) 
+        global lineL, lineR
 
+        if lineR > 520:
+            lineL = 170
+            lineR = 470
+            return -1
+        if lineR < 420:
+            lineL = 170
+            lineR = 470
+            return 0
+        
         if cnt == 0:
             return None
-    
+        
         result = total / cnt
-        #result += (hist - 460) * 0.0015
 
         return result
 
@@ -96,20 +109,28 @@ class ComputerVision(object):
         return masked_image
 
     def plothistogram(self, image):
-        histogram = np.sum(image[3 * image.shape[0]//4:, :], axis=0)
-        indices = np.where(histogram >= 20000)[0]
-        if indices.size == 0:
-            return 640, 200000
-        elif indices[-1] < 360:
-            return 0, 20000
-        else:
-            return indices[-1], histogram[indices[-1]]
+        global lineL, lineR
+        histogram = np.sum(image[7 * image.shape[0]//8:, :], axis=0)
+        indices = np.where(histogram >= 10000)[0]
+        if indices.size > 0:
+            tempR = indices[np.argmax(np.abs(indices - lineR))]
+            tempL = indices[np.argmax(np.abs(indices - lineL))]
+            if np.abs(tempR - lineR) < 30:
+                a = tempR - lineR
+                lineR += a
+                lineL += a
+                return
+            if np.abs(tempL - lineL) < 30:
+                a = tempL - lineL
+                lineR += a
+                lineL += a
+                return
 
     def wrapping(self, image):
-        points = [[ 19, 359],
-      [598, 358],
-      [515, 167],
-      [123, 172]]
+        points = [[ 87, 357],
+    [559, 357],
+    [433, 119],
+    [226, 119]]
 
         height, width = image.shape[0], image.shape[1]
         scaled_points = [(int(p[0]), int(p[1])) for p in points]
@@ -134,14 +155,14 @@ class ComputerVision(object):
         # 그레이스케일 변환
         gray = self.grayscale(bird_eye_view)
         
-        _, binary_img = cv2.threshold(gray, 200, 255, cv2.THRESH_BINARY)
+        _, binary_img = cv2.threshold(gray, 180, 255, cv2.THRESH_BINARY)
         blur_gray = self.gaussian_blur(binary_img, (5, 5))
         
         hist = self.histogram_equalization(blur_gray)
         dst = self.morphology(hist, (2, 2), mode="opening")
 
         # 가우시안 블러 적용
-        cv2.imshow("dst",dst)
+        #cv2.imshow("dst", dst)
         imshape = img.shape
         vertices = np.array([[
             (160, imshape[0] * 1.0),          
@@ -164,6 +185,7 @@ class Arduino:
         self.cap = cv2.VideoCapture("/dev/video2")
         self.cap.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
         self.cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 360)
+        self.cap.set(cv2.CAP_PROP_AUTOFOCUS, 0)
         self.arduino = serial.Serial(port='/dev/ttyACM0', baudrate=9600, timeout=.1)
         time.sleep(2.0)
         self.computerVision = ComputerVision()
@@ -174,22 +196,37 @@ class Arduino:
     def move(self):
         # 모터 회전 후 이동
         try:
+            check = 0
             while True:
+                start = time.time()
                 self.reward = self.take_picture()
                 
                 if self.reward is None:
                     continue
                 
-                k = 43
-                angle = self.reward * k + 17
-                
+                angle = self.reward * angleK + 17
+                                
                 angle = int(angle)
-                print(angle)
-                
-                time.sleep(0.1)
+                #print(lineL, lineR, angle)
+                """
+                if angle > 27:
+                    check = 1
+                elif angle < 13:
+                    check = -1
+                elif 19 < angle < 21:
+                    if check == 1:
+                        angle = 10
+                        check = 0
+                    elif check == -1:
+                        angle = 30
+                        chekc = 0
+                """
+                end = time.time()
+                if end - start < 0.1:
+                    time.sleep(0.1 - (end - start))
                 self.arduino.flush()
                 self.arduino.write(f"{angle}\n".encode('utf-8'))
-                cv2.waitKey(1)
+                #cv2.waitKey(1)
                 
         except KeyboardInterrupt:
             print("stop")

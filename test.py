@@ -8,7 +8,7 @@ def get_bird_eye_view(image, output_size, points):
     scaled_points = [(int(p[0] * width / image.shape[1]), int(p[1] * height / image.shape[0])) for p in points]
     
     src_points = np.float32([scaled_points[0], scaled_points[1], scaled_points[3], scaled_points[2]])
-    dst_points = np.float32([[100, height], [width - 100, height], [100, 0], [width - 100, 0]])
+    dst_points = np.float32([[160, height], [width - 160, height], [160, 0], [width - 160, 0]])
     
     matrix = cv2.getPerspectiveTransform(src_points, dst_points)
     bird_eye_view = cv2.warpPerspective(image, matrix, output_size)
@@ -37,8 +37,8 @@ def get_points(image):
         return masked_frame
     
     def resize_image(img, scale_percent):
-        width = 720
-        height = 720
+        width = 640
+        height = 360
         return cv2.resize(img, (width, height), interpolation=cv2.INTER_AREA)
 
     scale_percent = 50
@@ -91,11 +91,14 @@ def get_points(image):
     cv2.destroyAllWindows()
 
 def bev_main():
-    dataset_directory = os.path.abspath(os.path.join(os.path.dirname(__file__), "."))
-    image_path = os.path.join(dataset_directory, "pic.jpg")
-    image = np.array(cv2.imread(image_path))
-            
-    get_points(image)
+    cap = cv2.VideoCapture("/dev/video2")
+    cap.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
+    cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 360)
+    cap.set(cv2.CAP_PROP_AUTOFOCUS, 0)
+    
+    ret, img = cap.read()
+
+    get_points(img)
 
 if __name__ == "__main__":
     bev_main()
