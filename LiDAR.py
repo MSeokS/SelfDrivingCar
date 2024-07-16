@@ -14,7 +14,7 @@ if __name__ == "__main__":
     arduino.write("0\n".encode('utf-8'))
 
     for scan in env.scanning():
-        scan1 = env.getAngleDistanceRange(scan, 75, 80, 500, 2000)
+        scan1 = env.getAngleDistanceRange(scan, 90, 95, 500, 2000)
 
         if len(scan1) > 0:
             print(scan1)
@@ -32,7 +32,7 @@ if __name__ == "__main__":
     
     count = 0
     for scan in env.scanning():
-        scan2 = env.getAngleDistanceRange(scan, 75, 80, 500, 2000)
+        scan2 = env.getAngleDistanceRange(scan, 90, 95, 500, 2000)
 
         if len(scan2) > 0:
             print(scan2)
