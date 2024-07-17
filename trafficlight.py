@@ -54,7 +54,6 @@ color = detect_traffic_light_color(image)
 print(f'Detected traffic light color: {color}')
 
 # 결과 이미지 출력
-
 cv2.imshow('Image', image)
 cv2.waitKey(0)
 cv2.destroyAllWindows()
