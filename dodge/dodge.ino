@@ -7,9 +7,12 @@ int motorB1 = 4;
 int motorB2 = 5;
 int motorH1 = 6;
 int motorH2 = 7;
+int trig = 8;
+int echo = 9;
 int reg;
 int temp;
-char a;
+long distance;
+int count = 0;
 
 
 void setup() {
@@ -20,6 +23,8 @@ void setup() {
   pinMode(motorB1, OUTPUT);
   pinMode(motorB2, OUTPUT);
   pinMode(analogPin, INPUT);
+  pinMode(trig, OUTPUT);    // trig 핀 모드 설정
+  pinMode(echo, INPUT);     // echo 핀 모드 설정
 
   reg = potentiometer_Read(analogPin);
   if(reg < 17) {
@@ -41,18 +46,12 @@ void setup() {
 }
 
 void loop() {
+  distance = ultrasonic_distance(trig, echo);
+  Serial.print(distance);
+  Serial.println(" mm");
+  delay(100);
 
-  // put your main code here, to run repeatedly:
-  if (Serial.available() > 0) { // 시리얼 버퍼에 데이터가 있는지 확인
-    temp = Serial.parseInt(); // 정수형 데이터 읽기
-    Serial.print("Received Value: ");
-    Serial.println(temp); // 받은 값 출력
-    
-    if(temp == 999) {
-      motor_hold(motorA1, motorA2);
-      motor_hold(motorB1, motorB2);
-    }
-    else if(temp == 1) {
+  if(distance < 1000 && count == 0) {
       motor_forward(motorH1, motorH2, 150);
       delay(3000);
       motor_hold(motorH1, motorH2);
@@ -66,8 +65,9 @@ void loop() {
           motor_hold(motorH1, motorH2);
           reg = potentiometer_Read(analogPin);
         }
+      count++;
     }
-    else if(temp == 2) {
+    else if(distance < 1000 && count == 1) {
       motor_backward(motorH1, motorH2, 150);
       delay(3000);
       motor_hold(motorH1, motorH2);
@@ -81,14 +81,25 @@ void loop() {
           motor_hold(motorH1, motorH2);
           reg = potentiometer_Read(analogPin);
         }
+      count--;
     }
-    else if(temp == 3) {
+  // put your main code here, to run repeatedly:
+  if (Serial.available() > 0) { // 시리얼 버퍼에 데이터가 있는지 확인
+    temp = Serial.parseInt(); // 정수형 데이터 읽기
+    Serial.print("Received Value: ");
+    Serial.println(temp); // 받은 값 출력
+    
+    if(temp == 999) {
+      motor_hold(motorA1, motorA2);
+      motor_hold(motorB1, motorB2);
+    }
+    else if(temp == 300) {
       motor_forward(motorA1, motorA2, 150);
       motor_forward(motorB1, motorB2, 150);
     }
     else {
       motor_forward(motorA1, motorA2, 150);
-      motor_forward(motorB1, motorB2, 1501);
+      motor_forward(motorB1, motorB2, 150);
 
         reg = potentiometer_Read(analogPin);
       if (temp < 10)

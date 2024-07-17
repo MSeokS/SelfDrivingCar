@@ -12,7 +12,7 @@ class Arduino:
         self.cap = cv2.VideoCapture(1, cv2.CAP_DSHOW)
         self.cap.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
         self.cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 360)
-        self.cap.set(cv2.CAP_PROP_AUTOFOCUS, 0)0
+        self.cap.set(cv2.CAP_PROP_AUTOFOCUS, 0)
         self.arduino = serial.Serial(port='COM5', baudrate=9600, timeout=.1)
         time.sleep(2.0)
         # LiDAR 초기화
@@ -44,12 +44,12 @@ class Arduino:
                         print('turn left')
                         self.arduino.write("100\n".encode('utf-8'))
                         count += 1
-                        time.sleep(2)
+                        time.sleep(6)
                     elif count == 1:
-                        print('turn right')
+                        print('turn2 right')
                         self.arduino.write("200\n".encode('utf-8'))
                         count -= 1
-                        time.sleep(2)
+                        time.sleep(6)
 
                 # if 정지선을 발견 or 횡단보도 인식:
                 # temp = 999
