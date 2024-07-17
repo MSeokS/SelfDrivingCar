@@ -16,9 +16,13 @@ yellow_upper = np.array([30, 255, 255])
 green_lower = np.array([40, 70, 70])
 green_upper = np.array([80, 255, 255])
 
-def detect_traffic_light_color(image):
+def detect_traffic_light_color(image, roi):
+    # 관심 영역 설정
+    x, y, w, h = roi
+    roi_image = image[y:y+h, x:x+w]
+    
     # 이미지를 HSV 색상 공간으로 변환
-    hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
+    hsv = cv2.cvtColor(roi_image, cv2.COLOR_BGR2HSV)
     
     # 빨간색 마스크 생성 (두 범위 합침)
     red_mask1 = cv2.inRange(hsv, red_lower1, red_upper1)
@@ -47,10 +51,16 @@ def detect_traffic_light_color(image):
         return 'Unknown'
 
 # 테스트 이미지 로드
-image = cv2.imread('red.jpg')
+image = cv2.imread('green.jpg')
+
+# 관심 영역 설정 (x, y, width, height)
+roi = (75, 125, 225, 100)  # 예: 이미지의 중간 부분
+
+# 관심 영역을 사각형으로 표시
+cv2.rectangle(image, (roi[0], roi[1]), (roi[0] + roi[2], roi[1] + roi[3]), (255, 0, 0), 2)
 
 # 신호등 색상 인식
-color = detect_traffic_light_color(image)
+color = detect_traffic_light_color(image, roi)
 print(f'Detected traffic light color: {color}')
 
 # 결과 이미지 출력

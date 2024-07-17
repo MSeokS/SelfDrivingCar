@@ -12,12 +12,12 @@ class Arduino:
         self.cap = cv2.VideoCapture(1, cv2.CAP_DSHOW)
         self.cap.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
         self.cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 360)
-        self.cap.set(cv2.CAP_PROP_AUTOFOCUS, 0)
+        self.cap.set(cv2.CAP_PROP_AUTOFOCUS, 0)0
         self.arduino = serial.Serial(port='COM5', baudrate=9600, timeout=.1)
         time.sleep(2.0)
         # LiDAR 초기화
-        env = LiDAR.libLidar('COM3')
-        env.init()
+        self.env = LiDAR.libLidar('COM3')
+        self.env.init()
         self.computerVision = ComputerVision()
 
     def __delete__(self):
@@ -31,9 +31,9 @@ class Arduino:
             count = 0   # 모드
             while True:
                 # 라이더 코드
-                scan = next(env.scanning())
-                scan1 = env.getAngleDistanceRange(scan, 360, 360, 500, 1000)
-                scan2 = env.getAngleDistanceRange(scan, 0, 10, 500, 1000)
+                scan = next(self.env.scanning())
+                scan1 = self.env.getAngleDistanceRange(scan, 360, 360, 500, 1000)
+                scan2 = self.env.getAngleDistanceRange(scan, 0, 10, 500, 1000)
     
                 # 두 범위의 데이터를 결합
                 scan_comb = np.vstack((scan1, scan2))
@@ -42,12 +42,13 @@ class Arduino:
                     print(scan_comb)
                     if count == 0:
                         print('turn left')
-                        arduino.write("100\n".encode('utf-8'))
+                        self.arduino.write("100\n".encode('utf-8'))
                         count += 1
                         time.sleep(2)
                     elif count == 1:
                         print('turn right')
-                        arduino.write("200\n".encode('utf-8'))
+                        self.arduino.write("200\n".encode('utf-8'))
+                        count -= 1
                         time.sleep(2)
 
                 # if 정지선을 발견 or 횡단보도 인식:

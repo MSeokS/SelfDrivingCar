@@ -8,7 +8,7 @@ arduino = serial.Serial(port='COM5', baudrate=9600, timeout=.1)
 time.sleep(2)  # 아두이노 초기화 시간 대기
 
 if __name__ == "__main__":
-    env = LiDAR.libLidar('COM6')
+    env = LiDAR.libLidar('COM3')
     env.init()
     count = 0
     arduino.write("0\n".encode('utf-8'))

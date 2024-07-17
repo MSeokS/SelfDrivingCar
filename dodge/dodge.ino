@@ -20,6 +20,24 @@ void setup() {
   pinMode(motorB1, OUTPUT);
   pinMode(motorB2, OUTPUT);
   pinMode(analogPin, INPUT);
+
+  reg = potentiometer_Read(analogPin);
+  if(reg < 17) {
+    while(reg < 17) {
+      motor_forward(motorH1, motorH2, 150);
+      delay(10);
+      motor_hold(motorH1, motorH2);
+      reg = potentiometer_Read(analogPin);
+    }
+  }
+  else if(reg > 17) {
+    while(reg > 17) {
+      motor_backward(motorH1, motorH2, 150);
+      delay(10);
+      motor_hold(motorH1, motorH2);
+      reg = potentiometer_Read(analogPin);
+    }
+  }
 }
 
 void loop() {
@@ -34,25 +52,43 @@ void loop() {
       motor_hold(motorA1, motorA2);
       motor_hold(motorB1, motorB2);
     }
-    else if(temp == 100) {
+    else if(temp == 1) {
       motor_forward(motorH1, motorH2, 150);
-      delay(1000);
+      delay(3000);
       motor_hold(motorH1, motorH2);
       motor_backward(motorH1, motorH2, 150);
-      delay(1000);
+      delay(3000);
       motor_hold(motorH1, motorH2);
+      reg = potentiometer_Read(analogPin);
+      while(reg < 17) {
+          motor_forward(motorH1, motorH2, 150);
+          delay(10);
+          motor_hold(motorH1, motorH2);
+          reg = potentiometer_Read(analogPin);
+        }
     }
-    else if(temp == 200) {
+    else if(temp == 2) {
       motor_backward(motorH1, motorH2, 150);
-      delay(1000);
+      delay(3000);
       motor_hold(motorH1, motorH2);
       motor_forward(motorH1, motorH2, 150);
-      delay(1000);
+      delay(3000);
       motor_hold(motorH1, motorH2);
+      reg = potentiometer_Read(analogPin);
+      while(reg > 17) {
+          motor_backward(motorH1, motorH2, 150);
+          delay(10);
+          motor_hold(motorH1, motorH2);
+          reg = potentiometer_Read(analogPin);
+        }
+    }
+    else if(temp == 3) {
+      motor_forward(motorA1, motorA2, 150);
+      motor_forward(motorB1, motorB2, 150);
     }
     else {
-      motor_forward(motorA1, motorA2, 255);
-      motor_forward(motorB1, motorB2, 255);
+      motor_forward(motorA1, motorA2, 150);
+      motor_forward(motorB1, motorB2, 1501);
 
         reg = potentiometer_Read(analogPin);
       if (temp < 10)
