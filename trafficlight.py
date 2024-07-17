@@ -47,13 +47,14 @@ def detect_traffic_light_color(image):
         return 'Unknown'
 
 # 테스트 이미지 로드
-image = cv2.imread('green.jpg')
+image = cv2.imread('red.jpg')
 
 # 신호등 색상 인식
 color = detect_traffic_light_color(image)
 print(f'Detected traffic light color: {color}')
 
 # 결과 이미지 출력
+
 cv2.imshow('Image', image)
 cv2.waitKey(0)
 cv2.destroyAllWindows()

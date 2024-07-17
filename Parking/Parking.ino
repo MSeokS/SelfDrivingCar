@@ -37,6 +37,7 @@ void setup() {
       reg = potentiometer_Read(analogPin);
     }
   }
+  
 }
 
 void loop() {
@@ -46,33 +47,39 @@ void loop() {
     Serial.print("Received Value: ");
     Serial.println(temp); // 받은 값 출력(라이다)
 
-    if(temp == 0) { // 직진
-      motor_forward(motorA1, motorA2, 100);
-      motor_forward(motorB1, motorB2, 100);
-    }
-
-    else if(temp == 1) {
-      motor_hold(motorA1, motorA2);
-      motor_hold(motorB1, motorB2);
-      motor_forward(motorH1, motorH2, 150);
-      delay(1000);
-      motor_hold(motorH1, motorH2);
-
+    if(temp == 0) {
       motor_forward(motorA1, motorA2, 100);
       motor_forward(motorB1, motorB2, 100);
     }
     
-    else if(temp == 2) { // 회전 후 후진
-      delay(3000);
+    else if(temp == 1) {
       motor_hold(motorA1, motorA2);
       motor_hold(motorB1, motorB2); // 멈추고
       motor_backward(motorH1, motorH2, 150); // 오른쪽으로 핸들을 돌림
       delay(1000);
       motor_hold(motorH1, motorH2);
-      motor_backward(motorA1, motorA2, 100); // 회전
+      motor_backward(motorA1, motorA2, 100);
       motor_backward(motorB1, motorB2, 100);
-      delay(5000);
+      delay(2500); // 오른쪽 뒤로
+
+      motor_hold(motorA1, motorA2);
+      motor_hold(motorB1, motorB2);
+      motor_forward(motorH1, motorH2, 150); // 왼쪽으로 핸들을 돌림
+      delay(1000);
+      motor_hold(motorH1, motorH2);
+      motor_forward(motorA1, motorA2, 100);
+      motor_forward(motorB1, motorB2, 100);
+      delay(4000); // 왼쪽 앞으로
       
+      motor_hold(motorA1, motorA2);
+      motor_hold(motorB1, motorB2);
+      motor_backward(motorH1, motorH2, 150); // 오른쪽으로 핸들을 돌림
+      delay(1000);
+      motor_hold(motorH1, motorH2);
+      motor_backward(motorA1, motorA2, 100);
+      motor_backward(motorB1, motorB2, 100);
+      delay(4000); // 오른쪽 뒤로
+
       reg = potentiometer_Read(analogPin);
       while(reg < 17) {
         motor_forward(motorH1, motorH2, 150);
@@ -86,25 +93,32 @@ void loop() {
       motor_backward(motorB1, motorB2, 100);
     }
 
-    else if(temp == 3) { // stop
+    else if(temp == 2) {
       motor_hold(motorA1, motorA2);
       motor_hold(motorB1, motorB2);
-      delay(3000);
-      temp = 3;
     }
 
-    else if(temp == 4) { // 나가기
+    else if(temp == 3) {
       motor_backward(motorH1, motorH2, 150); // 오른쪽으로 핸들을 돌림
       delay(1000);
       motor_forward(motorA1, motorA2, 100);
       motor_forward(motorB1, motorB2, 100);
-    }
+      delay(12500);
+      motor_hold(motorA1, motorA2);
+      motor_hold(motorB1, motorB2);
 
-    else if(temp == 99) { // test
-      motor_backward(motorH1, motorH2, 150); // 오른쪽으로 핸들을 돌림
-      delay(1000);
-      motor_backward(motorA1, motorA2, 100);
+      reg = potentiometer_Read(analogPin);
+      while(reg < 17) {
+        motor_forward(motorH1, motorH2, 150);
+        delay(10);
+        motor_hold(motorH1, motorH2);
+        reg = potentiometer_Read(analogPin);
+      }
+      motor_forward(motorA1, motorA2, 100);
       motor_forward(motorB1, motorB2, 100);
+      delay(10000);
+      motor_hold(motorA1, motorA2);
+      motor_hold(motorB1, motorB2);
     }
 
     while(Serial.available() > 0) {
